@@ -5,6 +5,7 @@ import axios from 'axios';
 const AudioRecorder = () => {
   const [recording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
+  const [transcript , setTranscript] = useState('')
   const mediaRecorder = useRef(null);
 
   const startRecording = async () => {
@@ -46,7 +47,7 @@ const AudioRecorder = () => {
         formData.append('audio_data', audioBlob, 'audio.wav');
 
         // Replace 'http://localhost:8765' with the actual base URL of your Flask server
-        const apiUrl = 'http://localhost:5002/process_audio';
+        const apiUrl = 'http://192.168.0.102:5002/process_audio';
 
         const response=  await axios.post(apiUrl, formData, {
           headers: {
@@ -56,6 +57,7 @@ const AudioRecorder = () => {
 
         
         console.log('Audio uploaded successfully');
+        setTranscript(response.data.segments[0].text)
        
         console.log('Server response:', response.data); // Log the server response
       }
@@ -66,15 +68,16 @@ const AudioRecorder = () => {
 
   return (
     <div>
-      <button onClick={startRecording} disabled={recording}>
+       <button onTouchStart={startRecording} onMouseDown={startRecording} disabled={recording}>
         Start Recording
       </button>
-      <button onClick={stopRecording} disabled={!recording}>
+      <button onTouchEnd={stopRecording} onMouseUp={stopRecording} disabled={!recording}>
         Stop Recording
       </button>
       <button onClick={sendAudio} disabled={!audioBlob}>
         Send Audio
       </button>
+      <p>{transcript}</p>
     </div>
   );
 };

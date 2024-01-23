@@ -1,4 +1,5 @@
-FROM nvidia/cuda:11.2.2-cudnn8-runtime-ubuntu20.04
+
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -34,17 +35,15 @@ RUN mkdir /app
 WORKDIR /app
 
 
-COPY requirements/ /app
+COPY requirements.txt /app
 
-# RUN apt-get update --fix-missing && \
-#      apt-get install -y  portaudio19-dev ffmpeg wget && \
-#      apt-get clean
+COPY gandhar.wav /app/
 
-# RUN bash setup.sh
-RUN pip install -r server.txt
-
-
+RUN pip install -r requirements.txt
 
 COPY app.py /app
+
+COPY test.py /app
+
 
 CMD ["python", "app.py"]
