@@ -6,3 +6,4 @@ server/__pycache__/tortoise_api.cpython-310.pyc
 server/output/out.wav
 server/output/sel3.mp3
 server/output/sel4.mp3
+src/

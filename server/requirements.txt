@@ -4,7 +4,7 @@ flask_cors
 faster-whisper==0.10.0
 --extra-index-url https://download.pytorch.org/whl/cu118
 torch==1.11.0
-
+google-generativeai
 # torchaudio==0.10.1
 # websockets
 # onnxruntime==1.16.0

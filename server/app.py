@@ -1,11 +1,5 @@
-# import ffmpeg
-
 from faster_whisper import WhisperModel
-# import numpy as np
-# import scipy
-
-
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 
 import pyttsx3
@@ -14,7 +8,9 @@ import soundfile as sf
 from rvc_infer import rvc_convert
 from tortoise_api import Tortoise_API
 
-
+import google.generativeai as genai
+import re
+import uuid 
 
 app = Flask(__name__)
 
@@ -29,44 +25,63 @@ model_size = "base.en"
 model = WhisperModel(model_size, device="cuda", compute_type="float16")
 
 
-def text_to_wav(text, filename, voice_index=0, ):
-    engine = pyttsx3.init(driverName='sapi5')
+safety_settings={'HARASSMENT':'block_none'}
+
+
+genai.configure(api_key="AIzaSyCcMn4ApSKqhBGpo0YV9BrSK3aSyL78fWo")
+
+g_model = genai.GenerativeModel('gemini-pro')
+
+#intialize tortoise tss
+tortoise = Tortoise_API()
+
+path_to_file = "output/out.wav"
+
+messages = [{'role':'user',
+     'parts': ["You are Ava who is very excellent in programming and tech,and help other with their queries.Give very short responses under 200 words."]} ]
+
+response = g_model.generate_content(messages,
+                                generation_config=genai.types.GenerationConfig(
+                                
+                                temperature=0.6),
+                                safety_settings=safety_settings)
+
+messages.append({'role':'model',
+                    'parts':[response.text]})
+
+
+
+
+def transcribe():
+        # Process the audio using the Whisper model
+        segments, _ = model.transcribe('audio.mp3', beam_size=5)
+        # concatenated_text = ' '.join([segment["text"] for segment in segments])
+        text = []
+        for segment in segments:
+            text.append(segment.text)
+
+        return text[0]
+
+
+def chat(user_query):
+     messages.append( {'role':'user',
+        'parts': [user_query]})
+     
+     response = g_model.generate_content(messages,
+                                        generation_config=genai.types.GenerationConfig(
+                                        # Only one candidate for now.
+                                        candidate_count=1,
+                                        stop_sequences=['x'],
+                                        max_output_tokens=1000,
+                                        temperature=0.4),
+                                    safety_settings=safety_settings)
+     messages.append({'role':'model',
+                        'parts':[response.text]})
+     
+     return response.text
+        
+     
     
-    voices = engine.getProperty('voices')
-    if voice_index >= len(voices):
-        print(f"Invalid voice index. Choose between 0 and {len(voices) - 1}. Using default voice.")
-    else:
-        engine.setProperty('voice', voices[voice_index].id)
-    
-    engine.setProperty('rate', 150)
-    engine.save_to_file(text, filename)
-    engine.runAndWait()
-
-def play_audio(filename):
-    data, samplerate = sf.read(filename)
-    sd.play(data, samplerate)
-    sd.wait()
-
-def tts():
-    engine = pyttsx3.init(driverName='sapi5')
-    voices = engine.getProperty('voices')
-    print("Available voices:")
-    for index, voice in enumerate(voices):
-        print(f"{index}: {voice.name}")
-
-    voice_index = 1
-    text = "Hello there, my name is marine and I am excited to meet you!"
-    audio_file_name = "out.wav"
-    
-    text_to_wav(text, 
-                
-                audio_file_name, 
-                voice_index)
-    
-    return audio_file_name
-
-
-
 @app.route('/')
 def hello():
     response_data = {"message": "Hello from the server!"}
@@ -81,28 +96,61 @@ def process_audio():
         f.save('audio.mp3')
         f.flush()
         f.close()
-       
+
+        transcribe_text = transcribe()
+
+        bot_replie= chat(transcribe_text)
+
+        emoji_pattern = re.compile("["
+        u"\U0001F600-\U0001F64F"  # emoticons
+                           "]+", flags=re.UNICODE)
         
+        cleaned_response = re.sub('[<>?!@*():"/\&#$%^;]', '', bot_replie)
 
-       
+        cleaned_response = emoji_pattern.sub(r'',  cleaned_response)
+
+        cleaned_responses = [response for response in cleaned_response.split('.') if response.strip()]
+
+        cleaned_responses = [response.replace('\n\n', ' ').replace('\n', ' ') for response in cleaned_responses]
+        # Process each sentence in the cleaned_responses array
+        for cleaned_response in cleaned_responses:
+            # Call the TTS function to convert text to speech and save the intermediate audio file
+            audio_file_name = tortoise.call_api(cleaned_response)
+
+            # Call the RVC function to convert the TTS audio file and save the final audio file
+            rvc_convert(model_path="Selena.pth",
+                        f0_up_key=2,
+                        input_path=audio_file_name)
+            
+         
+
+            # Send the processed audio file as a response for each sentence
+        send_file(
+            path_to_file,
+            mimetype="audio/wav",
+            as_attachment=False,
+        )
+        return "Processing completed.", 200
+
+        # audio_file_name = tortoise.call_api(cleaned_response)
+
+        # rvc_convert(model_path="Selena.pth",
+        #         f0_up_key=2,
+        #         input_path=audio_file_name)
+
+        # # response_data = {"response": response.text}
+        # return send_file(
+        #  path_to_file, 
+        #  mimetype="audio/wav", 
+        #  as_attachment=False, 
+        # ), 200
+     
         
-        # Process the audio using the Whisper model
-        segments, info = model.transcribe('audio.mp3', beam_size=5)
-
-        # Prepare the response
-        response = {
-            "language": info.language,
-            "language_probability": info.language_probability,
-            "segments": [
-                {"start": segment.start, "end": segment.end, "text": segment.text}
-                for segment in segments
-            ],
-        }
-
-        return jsonify(response)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
 
 # @app.route('/uploader', methods = ['GET', 'POST'])
 # def upload_file():
@@ -112,6 +160,10 @@ def process_audio():
 #         f.flush()
 #         f.close()
 #     return 'file uploaded successfully'
+
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5002)
