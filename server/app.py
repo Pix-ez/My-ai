@@ -11,6 +11,7 @@ from tortoise_api import Tortoise_API
 import google.generativeai as genai
 import re
 import uuid 
+import os
 
 app = Flask(__name__)
 
@@ -80,7 +81,19 @@ def chat(user_query):
      
      return response.text
         
-     
+
+def combine_audio_files(input_paths, output_path):
+    # Combine logic (you may use a library like pydub for this)
+    # Example using pydub:
+    from pydub import AudioSegment
+
+    combined_audio = AudioSegment.from_wav(input_paths[0])
+
+    for path in input_paths[1:]:
+        audio_segment = AudioSegment.from_wav(path)
+        combined_audio += audio_segment
+
+    combined_audio.export(output_path, format="wav")
     
 @app.route('/')
 def hello():
@@ -112,35 +125,51 @@ def process_audio():
         cleaned_responses = [response for response in cleaned_response.split('.') if response.strip()]
 
         cleaned_responses = [response.replace('\n\n', ' ').replace('\n', ' ') for response in cleaned_responses]
-        # Process each sentence in the cleaned_responses array
+
+        processed_audio_paths = []
+
+        # Create a folder to store individual sentence audio files
+        output_folder = "processed_audio"
+        os.makedirs(output_folder, exist_ok=True)
+
+        # # Process each sentence in the cleaned_responses array
         for cleaned_response in cleaned_responses:
             # Call the TTS function to convert text to speech and save the intermediate audio file
             audio_file_name = tortoise.call_api(cleaned_response)
 
             # Call the RVC function to convert the TTS audio file and save the final audio file
-            rvc_convert(model_path="Selena.pth",
+            output_audio_path = rvc_convert(model_path="Selena.pth",
                         f0_up_key=2,
-                        input_path=audio_file_name)
+                        input_path=audio_file_name,
+                        )
+            
+             # Append the processed audio path to the list
+            processed_audio_paths.append(output_audio_path)
+        
+
+         # Combine all individual audio files into one
+        combined_audio_path = os.path.join(output_folder, "combined_audio.wav")
+        combine_audio_files(processed_audio_paths, combined_audio_path)
             
          
 
             # Send the processed audio file as a response for each sentence
-        send_file(
-            path_to_file,
+    #    Send the combined processed audio file as a response
+        return send_file(
+            combined_audio_path,
             mimetype="audio/wav",
             as_attachment=False,
-        )
-        return "Processing completed.", 200
+        ), 200
 
         # audio_file_name = tortoise.call_api(cleaned_response)
 
-        # rvc_convert(model_path="Selena.pth",
+        # output_audio_path =rvc_convert(model_path="Selena.pth",
         #         f0_up_key=2,
         #         input_path=audio_file_name)
 
         # # response_data = {"response": response.text}
         # return send_file(
-        #  path_to_file, 
+        #  output_audio_path, 
         #  mimetype="audio/wav", 
         #  as_attachment=False, 
         # ), 200

@@ -64,17 +64,17 @@ const AudioRecorder = () => {
         // Create an Audio object directly from the binary audio data
        // Create a Blob from the response data
 
-      //  const audio = new Blob([response.data], { type: 'audio/wav' });
-      //  setAudio(audio);
+       const audio = new Blob([response.data], { type: 'audio/wav' });
+       setAudio(audio);
 
          // Check if the response data is a valid audio blob
-      if (response.data instanceof Blob) {
-        // Create an Audio object directly from the binary audio data
-        const audio = new Blob([response.data], { type: 'audio/wav' });
-        setAudio(audio);
-      } else {
-        console.error('Invalid server response:', response);
-      }
+      // if (response.data instanceof Blob) {
+      //   // Create an Audio object directly from the binary audio data
+      //   const audio = new Blob([response.data], { type: 'audio/wav' });
+      //   setAudio(audio);
+      // } else {
+      //   console.error('Invalid server response:', response);
+      // }
 
       // Ensure that playback starts only on user interaction
       // document.addEventListener('click', () => {
