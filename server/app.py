@@ -29,7 +29,7 @@ model = WhisperModel(model_size, device="cuda", compute_type="float16")
 safety_settings={'HARASSMENT':'block_none'}
 
 
-genai.configure(api_key="AIzaSyCcMn4ApSKqhBGpo0YV9BrSK3aSyL78fWo")
+genai.configure(api_key="API_KEY")
 
 g_model = genai.GenerativeModel('gemini-pro')
 
@@ -138,7 +138,7 @@ def process_audio():
             audio_file_name = tortoise.call_api(cleaned_response)
 
             # Call the RVC function to convert the TTS audio file and save the final audio file
-            output_audio_path = rvc_convert(model_path="Selena.pth",
+            output_audio_path = rvc_convert(model_path="ava.pth",
                         f0_up_key=2,
                         input_path=audio_file_name,
                         )
@@ -161,18 +161,7 @@ def process_audio():
             as_attachment=False,
         ), 200
 
-        # audio_file_name = tortoise.call_api(cleaned_response)
-
-        # output_audio_path =rvc_convert(model_path="Selena.pth",
-        #         f0_up_key=2,
-        #         input_path=audio_file_name)
-
-        # # response_data = {"response": response.text}
-        # return send_file(
-        #  output_audio_path, 
-        #  mimetype="audio/wav", 
-        #  as_attachment=False, 
-        # ), 200
+      
      
         
 
@@ -181,14 +170,6 @@ def process_audio():
 
 
 
-# @app.route('/uploader', methods = ['GET', 'POST'])
-# def upload_file():
-#     if request.method == 'POST':
-#         f = request.files['audio_data']
-#         f.save('audio.mp3')
-#         f.flush()
-#         f.close()
-#     return 'file uploaded successfully'
 
 
 
